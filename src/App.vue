@@ -1,57 +1,70 @@
 <script setup>
-import { reactive } from 'vue';
-import Cabecalho from './components/Cabecalho.vue'
-import Formulario from './components/Formulario.vue'
-import ListaDeTarefas from './components/ListaDeTarefas.vue'
-const estado = reactive({
-  filtro: 'todas',
-  tarefaTemp: '',
-  tarefas: [
-    {
-      titulo: 'Estudar ES6',
-      finalizada: false,
-    },
-    {
-      titulo: 'Estudar SASS',
-      finalizada: false,
-    },
-    {
-      titulo: 'Ir para a academia',
-      finalizada: true,
-    }
-  ]
-})
-const getTarefasPendentes = () => {
-  return estado.tarefas.filter(tarefa => !tarefa.finalizada)
-}
-const getTarefasFinalizadas = () => {
-  return estado.tarefas.filter(tarefa => tarefa.finalizada)
-}
-const getTarefasFiltradas = () => {
-  const { filtro } = estado;
-  switch (filtro) {
-    case 'pendentes':
-      return getTarefasPendentes();
-    case 'finalizadas':
-      return getTarefasFinalizadas();
+import { reactive, onMounted } from 'vue';
+import Header from './components/Header.vue';
+import Form from './components/Form.vue';
+import TaskList from './components/TaskList.vue';
+import "./app.css";
+
+const state = reactive({
+  filter: 'all',
+  tempTask: '',
+  tasks: []
+});
+
+const getPendingTasks = () => {
+  return state.tasks.filter(task => !task.completed);
+};
+
+const getCompletedTasks = () => {
+  return state.tasks.filter(task => task.completed);
+};
+
+const getFilteredTasks = () => {
+  const { filter } = state;
+  switch (filter) {
+    case 'pending':
+      return getPendingTasks();
+    case 'completed':
+      return getCompletedTasks();
     default:
-      return estado.tarefas;
+      return state.tasks;
   }
-}
-const cadastraTarefa = () => {
-  const tarefaNova = {
-    titulo: estado.tarefaTemp,
-    finalizada: false,
+};
+
+const addTask = () => {
+  const options = { month: 'short', day: 'numeric', year: 'numeric' };
+  const newTask = {
+    title: state.tempTask,
+    completed: false,
+    date: new Date().toLocaleDateString('en-US', options)
+  };
+  state.tasks.push(newTask);
+  state.tempTask = '';
+  updateLocalStorage();
+};
+
+const updateLocalStorage = () => {
+  localStorage.setItem('tasks', JSON.stringify(state.tasks));
+};
+
+const handleUpdateTaskStatus = ({ task, completed }) => {
+  console.log("hi")
+  task.completed = completed;
+  updateLocalStorage();
+};
+
+onMounted(() => {
+  const storedTasks = localStorage.getItem('tasks');
+  if (storedTasks) {
+    state.tasks = JSON.parse(storedTasks);
   }
-  estado.tarefas.push(tarefaNova);
-  estado.tarefaTemp = '';
-}
+});
 </script>
 
 <template>
-<div class="container">
-  <Cabecalho :tarefas-pendentes="getTarefasPendentes().length" />
-  <Formulario :trocar-filtro="evento => estado.filtro = evento.target.value" :tarefa-temp="estado.tarefaTemp" :edita-tarefa-temp="evento => estado.tarefaTemp = evento.target.value" :cadastra-tarefa="cadastraTarefa" />
-  <ListaDeTarefas :tarefas="getTarefasFiltradas()" />
-</div>
+  <div class="container">
+    <Header :pending-tasks="getPendingTasks().length" />
+    <Form :change-filter="event => state.filter = event.target.value" :temp-task="state.tempTask" :edit-temp-task="event => state.tempTask = event.target.value" :add-task="addTask" />
+    <TaskList :tasks="getFilteredTasks()" @update-task-status="handleUpdateTaskStatus" />
+  </div>
 </template>
